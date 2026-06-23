@@ -184,6 +184,7 @@ metadataProviders:
       mediaType: "MANGA" # filter used in matching. Can be NOVEL, MANGA or WEBTOON. MANGA type includes everything except novels
       authorRoles: [ "WRITER" ] # roles that will be mapped to author role
       artistRoles: [ "PENCILLER","INKER","COLORIST","LETTERER","COVER" ] # roles that will be mapped to artist role
+      # userAgent: "MyCustomBot/1.0" # optional custom User-Agent header for this provider. Leave empty or omit for default
     mal:
       priority: 20
       enabled: false
