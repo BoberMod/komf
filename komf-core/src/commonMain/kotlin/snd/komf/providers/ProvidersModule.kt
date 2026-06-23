@@ -4,6 +4,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpRequestRetryConfig
+import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.ConstantCookiesStorage
 import io.ktor.client.plugins.cookies.HttpCookies
@@ -147,8 +148,7 @@ class ProvidersModule(
         exponentialDelay(baseDelayMs = 2000, respectRetryAfterHeader = true)
     }
 
-    private val mangaUpdatesClient = MangaUpdatesClient(
-        baseHttpClientJson.config {
+    private val mangaUpdatesHttpClient = baseHttpClientJson.config {
             install(HttpRequestRateLimiter) {
                 interval = 10.seconds
                 eventsPerInterval = 15
@@ -158,10 +158,9 @@ class ProvidersModule(
                 defaultRetry()
             }
         }
-    )
+    private val mangaUpdatesClient = MangaUpdatesClient(mangaUpdatesHttpClient)
 
-    private val nautiljonClient = NautiljonClient(
-        baseHttpClient.config {
+    private val nautiljonHttpClient = baseHttpClient.config {
             install(HttpRequestRateLimiter) {
                 interval = 10.seconds
                 eventsPerInterval = 10
@@ -171,10 +170,9 @@ class ProvidersModule(
                 defaultRetry()
             }
         }
-    )
+    private val nautiljonClient = NautiljonClient(nautiljonHttpClient)
 
-    private val aniListClient = AniListClient(
-        baseHttpClientJson.config {
+    private val aniListHttpClient = baseHttpClientJson.config {
             install(HttpRequestRateLimiter) {
                 interval = 10.seconds
                 eventsPerInterval = 15
@@ -184,9 +182,9 @@ class ProvidersModule(
                 defaultRetry()
             }
         }
-    )
-    private val yenPressClient = YenPressClient(
-        baseHttpClientJson.config {
+    private val aniListClient = AniListClient(aniListHttpClient)
+
+    private val yenPressHttpClient = baseHttpClientJson.config {
             install(HttpRequestRateLimiter) {
                 interval = 10.seconds
                 eventsPerInterval = 10
@@ -196,9 +194,9 @@ class ProvidersModule(
                 defaultRetry()
             }
         }
-    )
-    private val kodanshaClient = KodanshaClient(
-        baseHttpClientJson.config {
+    private val yenPressClient = YenPressClient(yenPressHttpClient)
+
+    private val kodanshaHttpClient = baseHttpClientJson.config {
             install(HttpRequestRateLimiter) {
                 interval = 10.seconds
                 eventsPerInterval = 10
@@ -208,9 +206,9 @@ class ProvidersModule(
                 defaultRetry()
             }
         }
-    )
-    private val vizClient = VizClient(
-        baseHttpClient.config {
+    private val kodanshaClient = KodanshaClient(kodanshaHttpClient)
+
+    private val vizHttpClient = baseHttpClient.config {
             install(HttpRequestRateLimiter) {
                 interval = 10.seconds
                 eventsPerInterval = 5
@@ -220,9 +218,9 @@ class ProvidersModule(
                 defaultRetry()
             }
         }
-    )
-    private val bookWalkerClient = BookWalkerClient(
-        ktor = baseHttpClient.config {
+    private val vizClient = VizClient(vizHttpClient)
+
+    private val bookWalkerHttpClient = baseHttpClient.config {
             install(HttpRequestRateLimiter) {
                 interval = 10.seconds
                 eventsPerInterval = 10
@@ -231,11 +229,13 @@ class ProvidersModule(
             install(HttpRequestRetry) {
                 defaultRetry()
             }
-        },
+        }
+    private val bookWalkerClient = BookWalkerClient(
+        ktor = bookWalkerHttpClient,
         json = json
     )
-    private val mangaDexClient = MangaDexClient(
-        baseHttpClientJson.config {
+
+    private val mangaDexHttpClient = baseHttpClientJson.config {
             install(HttpRequestRateLimiter) {
                 interval = 10.seconds
                 eventsPerInterval = 15
@@ -245,10 +245,9 @@ class ProvidersModule(
                 defaultRetry()
             }
         }
-    )
+    private val mangaDexClient = MangaDexClient(mangaDexHttpClient)
 
-    private val hentagClient = HentagClient(
-        baseHttpClientJson.config {
+    private val hentagHttpClient = baseHttpClientJson.config {
             install(HttpRequestRateLimiter) {
                 interval = 5.seconds
                 eventsPerInterval = 1
@@ -258,10 +257,9 @@ class ProvidersModule(
                 defaultRetry()
             }
         }
-    )
+    private val hentagClient = HentagClient(hentagHttpClient)
 
-    private val mangaBakaClient = MangaBakaApiClient(
-        baseHttpClientJson.config {
+    private val mangaBakaHttpClient = baseHttpClientJson.config {
             install(HttpRequestRateLimiter) {
                 interval = 1.seconds
                 eventsPerInterval = 1
@@ -271,7 +269,7 @@ class ProvidersModule(
                 defaultRetry()
             }
         }
-    )
+    private val mangaBakaClient = MangaBakaApiClient(mangaBakaHttpClient)
     private val mangaBakaCoverFetchClient = baseHttpClientJson.config {
         install(HttpRequestRateLimiter) {
             interval = 1.seconds
@@ -286,8 +284,7 @@ class ProvidersModule(
 
     private val mangaBakaDbDataSource = mangaBakaDatabase?.let { MangaBakaDbDataSource(it) }
 
-    private val webtoonsClient = WebtoonsClient(
-        baseHttpClientJson.config {
+    private val webtoonsHttpClient = baseHttpClientJson.config {
             install(HttpRequestRateLimiter) {
                 interval = 1.seconds
                 eventsPerInterval = 1
@@ -322,7 +319,7 @@ class ProvidersModule(
                 json()
             }
         }
-    )
+    private val webtoonsClient = WebtoonsClient(webtoonsHttpClient)
 
     private fun createMetadataProviders(
         config: ProvidersConfig,
@@ -430,6 +427,11 @@ class ProvidersModule(
         )
     }
 
+    private fun HttpClient.withUserAgent(userAgent: String?): HttpClient {
+        if (userAgent == null) return this
+        return config { install(UserAgent) { agent = userAgent } }
+    }
+
     private fun createMalMetadataProvider(
         config: ProviderConfig,
         clientId: String?,
@@ -439,7 +441,7 @@ class ProvidersModule(
         requireNotNull(clientId) { "MyAnimeList clientId is not set" }
 
         val malClient = MalClient(
-            baseHttpClientJson.config {
+            baseHttpClientJson.withUserAgent(config.userAgent).config {
                 install(HttpRequestRateLimiter) {
                     preconfigured = malRateLimiter
                 }
@@ -476,6 +478,10 @@ class ProvidersModule(
     ): MangaUpdatesMetadataProvider? {
         if (config.enabled.not()) return null
 
+        val providerClient = if (config.userAgent != null) {
+            MangaUpdatesClient(mangaUpdatesHttpClient.withUserAgent(config.userAgent))
+        } else client
+
         val mangaUpdatesMetadataMapper = MangaUpdatesMetadataMapper(
             metadataConfig = config.seriesMetadata,
             authorRoles = config.authorRoles,
@@ -484,7 +490,7 @@ class ProvidersModule(
         val mangaUpdatesSimilarityMatcher: NameSimilarityMatcher =
             config.nameMatchingMode?.let { nameSimilarityMatcher(it) } ?: defaultNameMatcher
         return MangaUpdatesMetadataProvider(
-            client,
+            providerClient,
             mangaUpdatesMetadataMapper,
             mangaUpdatesSimilarityMatcher,
             config.seriesMetadata.thumbnail,
@@ -498,6 +504,11 @@ class ProvidersModule(
         defaultNameMatcher: NameSimilarityMatcher,
     ): NautiljonMetadataProvider? {
         if (config.enabled.not()) return null
+
+        val providerClient = if (config.userAgent != null) {
+            NautiljonClient(nautiljonHttpClient.withUserAgent(config.userAgent))
+        } else client
+
         val seriesMetadataMapper = NautiljonSeriesMetadataMapper(
             seriesMetadataConfig = config.seriesMetadata,
             bookMetadataConfig = config.bookMetadata,
@@ -507,7 +518,7 @@ class ProvidersModule(
         val similarityMatcher = config.nameMatchingMode
             ?.let { nameSimilarityMatcher(it) } ?: defaultNameMatcher
         return NautiljonMetadataProvider(
-            client,
+            providerClient,
             seriesMetadataMapper,
             similarityMatcher,
             config.seriesMetadata.thumbnail,
@@ -522,6 +533,10 @@ class ProvidersModule(
     ): AniListMetadataProvider? {
         if (config.enabled.not()) return null
 
+        val providerClient = if (config.userAgent != null) {
+            AniListClient(aniListHttpClient.withUserAgent(config.userAgent))
+        } else client
+
         val metadataMapper = AniListMetadataMapper(
             metadataConfig = config.seriesMetadata,
             authorRoles = config.authorRoles,
@@ -532,7 +547,7 @@ class ProvidersModule(
         val similarityMatcher = config.nameMatchingMode
             ?.let { nameSimilarityMatcher(it) } ?: defaultNameMatcher
         return AniListMetadataProvider(
-            client,
+            providerClient,
             metadataMapper,
             similarityMatcher,
             config.seriesMetadata.thumbnail,
@@ -547,6 +562,10 @@ class ProvidersModule(
     ): YenPressMetadataProvider? {
         if (config.enabled.not()) return null
 
+        val providerClient = if (config.userAgent != null) {
+            YenPressClient(yenPressHttpClient.withUserAgent(config.userAgent))
+        } else client
+
         val metadataMapper = YenPressMetadataMapper(
             config.seriesMetadata,
             config.bookMetadata,
@@ -556,7 +575,7 @@ class ProvidersModule(
         val similarityMatcher = config.nameMatchingMode
             ?.let { nameSimilarityMatcher(it) } ?: defaultNameMatcher
         return YenPressMetadataProvider(
-            client,
+            providerClient,
             metadataMapper,
             similarityMatcher,
             config.mediaType,
@@ -572,12 +591,16 @@ class ProvidersModule(
     ): KodanshaMetadataProvider? {
         if (config.enabled.not()) return null
 
+        val providerClient = if (config.userAgent != null) {
+            KodanshaClient(kodanshaHttpClient.withUserAgent(config.userAgent))
+        } else client
+
         val metadataMapper = KodanshaMetadataMapper(config.seriesMetadata, config.bookMetadata)
         val similarityMatcher =
             config.nameMatchingMode?.let { nameSimilarityMatcher(it) } ?: defaultNameMatcher
 
         return KodanshaMetadataProvider(
-            client,
+            providerClient,
             metadataMapper,
             similarityMatcher,
             config.seriesMetadata.thumbnail,
@@ -592,6 +615,10 @@ class ProvidersModule(
     ): VizMetadataProvider? {
         if (config.enabled.not()) return null
 
+        val providerClient = if (config.userAgent != null) {
+            VizClient(vizHttpClient.withUserAgent(config.userAgent))
+        } else client
+
         val metadataMapper = VizMetadataMapper(
             seriesMetadataConfig = config.seriesMetadata,
             bookMetadataConfig = config.bookMetadata,
@@ -602,7 +629,7 @@ class ProvidersModule(
             ?.let { nameSimilarityMatcher(it) } ?: defaultNameMatcher
 
         return VizMetadataProvider(
-            client,
+            providerClient,
             metadataMapper,
             similarityMatcher,
             config.seriesMetadata.thumbnail,
@@ -617,6 +644,10 @@ class ProvidersModule(
     ): BookWalkerMetadataProvider? {
         if (config.enabled.not()) return null
 
+        val providerClient = if (config.userAgent != null) {
+            BookWalkerClient(bookWalkerHttpClient.withUserAgent(config.userAgent), json)
+        } else client
+
         val bookWalkerMapper = BookWalkerMapper(
             seriesMetadataConfig = config.seriesMetadata,
             bookMetadataConfig = config.bookMetadata,
@@ -627,7 +658,7 @@ class ProvidersModule(
             ?.let { nameSimilarityMatcher(it) } ?: defaultNameMatcher
 
         return BookWalkerMetadataProvider(
-            client,
+            providerClient,
             bookWalkerMapper,
             similarityMatcher,
             config.seriesMetadata.thumbnail,
@@ -643,6 +674,10 @@ class ProvidersModule(
     ): MangaDexMetadataProvider? {
         if (config.enabled.not()) return null
 
+        val providerClient = if (config.userAgent != null) {
+            MangaDexClient(mangaDexHttpClient.withUserAgent(config.userAgent))
+        } else client
+
         val mangaDexMetadataMapper = MangaDexMetadataMapper(
             seriesMetadataConfig = config.seriesMetadata,
             bookMetadataConfig = config.bookMetadata,
@@ -655,7 +690,7 @@ class ProvidersModule(
         val mangaDexSimilarityMatcher: NameSimilarityMatcher =
             config.nameMatchingMode?.let { nameSimilarityMatcher(it) } ?: defaultNameMatcher
         return MangaDexMetadataProvider(
-            client,
+            providerClient,
             mangaDexMetadataMapper,
             mangaDexSimilarityMatcher,
             config.seriesMetadata.thumbnail,
@@ -670,7 +705,7 @@ class ProvidersModule(
     ): BangumiMetadataProvider? {
         if (config.enabled.not()) return null
         val client = BangumiClient(
-            baseHttpClientJson.config {
+            baseHttpClientJson.withUserAgent(config.userAgent).config {
                 install(HttpRequestRateLimiter) {
                     preconfigured = bangumiRateLimiter
                 }
@@ -711,7 +746,7 @@ class ProvidersModule(
         requireNotNull(apiKey) { "Api key is not configured for ComicVine provider" }
 
         val comicVineClient = ComicVineClient(
-            ktor = baseHttpClientJson.config {
+            ktor = baseHttpClientJson.withUserAgent(config.userAgent).config {
                 install(HttpRequestRetry) {
                     retryOnServerErrors(maxRetries = 3)
                     exponentialDelay(respectRetryAfterHeader = true)
@@ -746,6 +781,10 @@ class ProvidersModule(
     ): HentagMetadataProvider? {
         if (config.enabled.not()) return null
 
+        val providerClient = if (config.userAgent != null) {
+            HentagClient(hentagHttpClient.withUserAgent(config.userAgent))
+        } else client
+
         val hentagMetadataMapper = HentagMetadataMapper(
             metadataConfig = config.seriesMetadata,
             authorRoles = config.authorRoles,
@@ -754,7 +793,7 @@ class ProvidersModule(
         val hentagSimilarityMatcher: NameSimilarityMatcher =
             config.nameMatchingMode?.let { nameSimilarityMatcher(it) } ?: defaultNameMatcher
         return HentagMetadataProvider(
-            client,
+            providerClient,
             hentagMetadataMapper,
             hentagSimilarityMatcher,
             config.seriesMetadata.thumbnail,
@@ -774,15 +813,23 @@ class ProvidersModule(
             return null
         }
 
+        val providerDataSource = if (config.userAgent != null && datasource is MangaBakaApiClient) {
+            MangaBakaApiClient(mangaBakaHttpClient.withUserAgent(config.userAgent))
+        } else datasource
+
+        val providerCoverClient = if (config.userAgent != null && config.seriesMetadata.thumbnail) {
+            coverFetchClient.withUserAgent(config.userAgent)
+        } else coverFetchClient
+
         return MangaBakaMetadataProvider(
-            dataSource = datasource,
+            dataSource = providerDataSource,
             metadataMapper = MangaBakaMetadataMapper(
                 metadataConfig = config.seriesMetadata,
                 authorRoles = config.authorRoles,
                 artistRoles = config.artistRoles,
             ),
             nameMatcher = config.nameMatchingMode?.let { nameSimilarityMatcher(it) } ?: defaultNameMatcher,
-            coverFetchClient = if (config.seriesMetadata.thumbnail) coverFetchClient else null,
+            coverFetchClient = if (config.seriesMetadata.thumbnail) providerCoverClient else null,
             mediaType = config.mediaType
         )
     }
@@ -794,8 +841,12 @@ class ProvidersModule(
     ): WebtoonsMetadataProvider? {
         if (config.enabled.not()) return null
 
+        val providerClient = if (config.userAgent != null) {
+            WebtoonsClient(webtoonsHttpClient.withUserAgent(config.userAgent))
+        } else client
+
         return WebtoonsMetadataProvider(
-            client = client,
+            client = providerClient,
             metadataMapper = WebtoonsMetadataMapper(
                 metadataConfig = config.seriesMetadata,
                 authorRoles = config.authorRoles,

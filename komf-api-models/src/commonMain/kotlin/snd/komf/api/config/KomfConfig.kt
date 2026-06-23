@@ -129,6 +129,7 @@ sealed interface ProviderConf {
     val bookMetadata: BookMetadataConfigDto?
     val mediaType: KomfMediaType?
     val nameMatchingMode: KomfNameMatchingMode?
+    val userAgent: String?
 
     val authorRoles: Collection<KomfAuthorRole>
     val artistRoles: Collection<KomfAuthorRole>
@@ -142,6 +143,7 @@ data class ProviderConfigDto(
     override val bookMetadata: BookMetadataConfigDto,
     override val nameMatchingMode: KomfNameMatchingMode?,
     override val mediaType: KomfMediaType,
+    override val userAgent: String?,
 
     override val authorRoles: Collection<KomfAuthorRole>,
     override val artistRoles: Collection<KomfAuthorRole>,
@@ -154,6 +156,7 @@ data class AniListConfigDto(
     override val seriesMetadata: SeriesMetadataConfigDto,
     override val nameMatchingMode: KomfNameMatchingMode?,
     override val mediaType: KomfMediaType,
+    override val userAgent: String?,
 
     override val authorRoles: Collection<KomfAuthorRole>,
     override val artistRoles: Collection<KomfAuthorRole>,
@@ -172,6 +175,7 @@ data class MangaDexConfigDto(
     override val bookMetadata: BookMetadataConfigDto,
     override val nameMatchingMode: KomfNameMatchingMode?,
     override val mediaType: KomfMediaType,
+    override val userAgent: String?,
 
     override val authorRoles: Collection<KomfAuthorRole>,
     override val artistRoles: Collection<KomfAuthorRole>,
@@ -187,6 +191,7 @@ data class MangaBakaConfigDto(
     override val seriesMetadata: SeriesMetadataConfigDto,
     override val nameMatchingMode: KomfNameMatchingMode?,
     override val mediaType: KomfMediaType,
+    override val userAgent: String?,
 
     override val authorRoles: Collection<KomfAuthorRole>,
     override val artistRoles: Collection<KomfAuthorRole>,
