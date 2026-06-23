@@ -177,6 +177,11 @@ metadataProviders:
   comicVineIssueName: # string that contains "{number}" which will be replaced by the issue number ie. "Issue #{number}". Used when an issue has no name on ComicVine, default is null
   comicVineIdFormat: # string that contains "{id}" which will serve to parse the ComicVine volume of a given book from its title or folder name ie. "[cv-{id}]" which will correctly identify '.../Uncanny X-Men Omnibus (2006) [cv-27512]' as being [4050-27512](https://comicvine.gamespot.com/uncanny-x-men-omnibus/4050-27512/)
   bangumiToken: # bangumi provider require a token to show nsfw items https://next.bgm.tv/demo/access-token  env:KOMF_METADATA_PROVIDERS_BANGUMI_TOKEN
+  camofox: # Anti-detection browser for web scraping (optional)
+    enabled: false # Enable Camofox browser support env:KOMF_CAMOFOX_ENABLED
+    baseUrl: "http://localhost:9377" # Camofox server URL env:KOMF_CAMOFOX_BASE_URL
+    apiKey: # API key for authentication (optional) env:KOMF_CAMOFOX_API_KEY
+    userId: "komf" # Session user ID env:KOMF_CAMOFOX_USER_ID
   defaultProviders:
     mangaUpdates:
       priority: 10
@@ -362,6 +367,62 @@ metadataProviders:
       seriesMetadata:
         thumbnail: false
 ```
+
+## Camofox Browser Support
+
+Komf supports using [Camofox Browser](https://github.com/jo-inc/camofox-browser) as an anti-detection browser for web scraping. This is useful for providers that block direct HTTP requests or have anti-bot protections.
+
+### Setup
+
+1. **Install and start Camofox Browser:**
+
+```bash
+# Using npm
+npx @askjo/camofox-browser
+
+# Or using Docker
+docker run -p 9377:9377 camofox-browser
+```
+
+2. **Configure Komf:**
+
+Add to your `application.yml`:
+
+```yml
+metadataProviders:
+  camofox:
+    enabled: true
+    baseUrl: "http://localhost:9377"  # Camofox server URL
+    apiKey: "your-api-key"  # Optional: for authentication
+    userId: "komf"  # Session user ID
+```
+
+Or use environment variables:
+
+```bash
+export KOMF_CAMOFOX_ENABLED=true
+export KOMF_CAMOFOX_BASE_URL=http://localhost:9377
+export KOMF_CAMOFOX_API_KEY=your-api-key
+```
+
+### How it works
+
+When Camofox is enabled, HTML-scraping providers (BookWalker, Nautiljon, Viz) will use the browser to fetch pages instead of direct HTTP requests. This provides:
+
+- **Anti-detection**: Bypass Cloudflare, Google bot detection
+- **JavaScript rendering**: Properly render dynamic content
+- **Session isolation**: Separate cookies/storage per user
+- **Proxy support**: Route through residential proxies
+
+If Camofox is unavailable or fails, Komf falls back to direct HTTP requests automatically.
+
+### Supported Providers
+
+The following providers benefit from Camofox browser support:
+
+- **BookWalker**: Japanese manga/light novel store
+- **Nautiljon**: French manga database
+- **Viz**: English manga publisher
 
 ## Notifications
 

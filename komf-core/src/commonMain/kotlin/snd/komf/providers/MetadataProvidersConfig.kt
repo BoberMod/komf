@@ -1,6 +1,7 @@
 package snd.komf.providers
 
 import kotlinx.serialization.Serializable
+import snd.komf.browser.CamofoxConfig
 import snd.komf.model.AuthorRole
 import snd.komf.model.AuthorRole.COLORIST
 import snd.komf.model.AuthorRole.COVER
@@ -25,6 +26,7 @@ data class MetadataProvidersConfig(
     val defaultProviders: ProvidersConfig = ProvidersConfig(),
     val libraryProviders: Map<String, ProvidersConfig> = emptyMap(),
     val mangabakaDatabaseDir: String = "./mangabaka",
+    val camofox: CamofoxConfig = CamofoxConfig(),
 )
 
 @Serializable

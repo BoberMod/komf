@@ -6,6 +6,7 @@ import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import snd.komf.browser.HtmlFetcher
 import snd.komf.model.Image
 import snd.komf.providers.viz.model.VizAllBooksId
 import snd.komf.providers.viz.model.VizBook
@@ -16,27 +17,43 @@ import snd.komf.providers.viz.model.VizSeriesBook
 const val vizBaseUrl = "https://www.viz.com"
 
 class VizClient(
-    private val ktor: HttpClient
+    private val ktor: HttpClient,
+    private val htmlFetcher: HtmlFetcher? = null,
 ) {
     private val parser = VizParser()
 
     suspend fun searchSeries(name: String): Collection<VizSeriesBook> {
         val searchQuery = "$name, Vol. 1"
-        val document = ktor.get("$vizBaseUrl/search") {
-            parameter("search", searchQuery)
-            parameter("category", "Manga")
-        }.bodyAsText()
+        val url = "$vizBaseUrl/search?search=$searchQuery&category=Manga"
+        val document = if (htmlFetcher != null) {
+            htmlFetcher.fetchHtml(url)
+        } else {
+            ktor.get("$vizBaseUrl/search") {
+                parameter("search", searchQuery)
+                parameter("category", "Manga")
+            }.bodyAsText()
+        }
 
         return parser.parseSearchResults(document)
     }
 
     suspend fun getAllBooks(id: VizAllBooksId): Collection<VizSeriesBook> {
-        val document = ktor.get("$vizBaseUrl/manga-books/manga/${id.id}/all").bodyAsText()
+        val url = "$vizBaseUrl/manga-books/manga/${id.id}/all"
+        val document = if (htmlFetcher != null) {
+            htmlFetcher.fetchHtml(url)
+        } else {
+            ktor.get(url).bodyAsText()
+        }
         return parser.parseSeriesAllBooks(document)
     }
 
     suspend fun getBook(bookId: VizBookId, type: VizBookReleaseType): VizBook {
-        val document = ktor.get("$vizBaseUrl/manga-books/manga/${bookId.value}/${type.name.lowercase()}").bodyAsText()
+        val url = "$vizBaseUrl/manga-books/manga/${bookId.value}/${type.name.lowercase()}"
+        val document = if (htmlFetcher != null) {
+            htmlFetcher.fetchHtml(url)
+        } else {
+            ktor.get(url).bodyAsText()
+        }
         return parser.parseBook(document)
     }
 

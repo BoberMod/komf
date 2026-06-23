@@ -78,6 +78,16 @@ class ConfigLoader(private val yaml: Yaml) {
         val bangumiToken = System.getenv("KOMF_METADATA_PROVIDERS_BANGUMI_TOKEN")?.ifBlank { null }
             ?: metadataProvidersConfig.bangumiToken
 
+        val camofoxConfig = config.metadataProviders.camofox
+        val camofoxEnabled = System.getenv("KOMF_CAMOFOX_ENABLED")?.toBooleanStrictOrNull()
+            ?: camofoxConfig.enabled
+        val camofoxBaseUrl = System.getenv("KOMF_CAMOFOX_BASE_URL")?.ifBlank { null }
+            ?: camofoxConfig.baseUrl
+        val camofoxApiKey = System.getenv("KOMF_CAMOFOX_API_KEY")?.ifBlank { null }
+            ?: camofoxConfig.apiKey
+        val camofoxUserId = System.getenv("KOMF_CAMOFOX_USER_ID")?.ifBlank { null }
+            ?: camofoxConfig.userId
+
         return config.copy(
             komga = komgaConfig.copy(
                 baseUri = komgaBaseUri,
@@ -96,7 +106,13 @@ class ConfigLoader(private val yaml: Yaml) {
                 malClientId = malClientId,
                 comicVineApiKey = comicVineApiKey,
                 bangumiToken = bangumiToken,
-                mangabakaDatabaseDir = mangaBakaDirectory
+                mangabakaDatabaseDir = mangaBakaDirectory,
+                camofox = camofoxConfig.copy(
+                    enabled = camofoxEnabled,
+                    baseUrl = camofoxBaseUrl,
+                    apiKey = camofoxApiKey,
+                    userId = camofoxUserId
+                )
             ),
             notifications = config.notifications.copy(
                 templatesDirectory = templatesDirectory,

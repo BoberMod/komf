@@ -19,6 +19,11 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 import org.jetbrains.exposed.v1.jdbc.Database
+import snd.komf.browser.CamofoxClient
+import snd.komf.browser.CamofoxHtmlFetcher
+import snd.komf.browser.DirectHtmlFetcher
+import snd.komf.browser.FallbackHtmlFetcher
+import snd.komf.browser.HtmlFetcher
 import snd.komf.ktor.HttpRequestRateLimiter
 import snd.komf.ktor.intervalLimiter
 import snd.komf.ktor.rateLimiter
@@ -132,6 +137,26 @@ class ProvidersModule(
         install(ContentNegotiation) { json(json) }
     }
 
+    // Camofox browser client for anti-detection web scraping
+    val camofoxClient: CamofoxClient? = if (config.camofox.enabled) {
+        CamofoxClient(
+            httpClient = baseHttpClient,
+            config = config.camofox
+        )
+    } else {
+        null
+    }
+
+    // HTML fetcher for browser-based scraping (used by BookWalker, Nautiljon, Viz)
+    private val htmlFetcher: HtmlFetcher? = if (camofoxClient != null) {
+        FallbackHtmlFetcher(
+            directFetcher = DirectHtmlFetcher(baseHttpClient),
+            camofoxFetcher = CamofoxHtmlFetcher(camofoxClient)
+        )
+    } else {
+        null
+    }
+
     private val comicVineRateLimiter = ComicVineRateLimiter()
     private val malRateLimiter = rateLimiter(eventsPerInterval = 10, interval = 10.seconds)
     private val bangumiRateLimiter = intervalLimiter(eventsPerInterval = 10, interval = 7.seconds)
@@ -170,7 +195,10 @@ class ProvidersModule(
                 defaultRetry()
             }
         }
-    private val nautiljonClient = NautiljonClient(nautiljonHttpClient)
+    private val nautiljonClient = NautiljonClient(
+        ktor = nautiljonHttpClient,
+        htmlFetcher = htmlFetcher
+    )
 
     private val aniListHttpClient = baseHttpClientJson.config {
             install(HttpRequestRateLimiter) {
@@ -218,7 +246,10 @@ class ProvidersModule(
                 defaultRetry()
             }
         }
-    private val vizClient = VizClient(vizHttpClient)
+    private val vizClient = VizClient(
+        ktor = vizHttpClient,
+        htmlFetcher = htmlFetcher
+    )
 
     private val bookWalkerHttpClient = baseHttpClient.config {
             install(HttpRequestRateLimiter) {
@@ -232,7 +263,8 @@ class ProvidersModule(
         }
     private val bookWalkerClient = BookWalkerClient(
         ktor = bookWalkerHttpClient,
-        json = json
+        json = json,
+        htmlFetcher = htmlFetcher
     )
 
     private val mangaDexHttpClient = baseHttpClientJson.config {
