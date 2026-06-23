@@ -53,6 +53,7 @@ data class ProviderConfig(
     val bookMetadata: BookMetadataConfig = BookMetadataConfig(),
     val nameMatchingMode: NameMatchingMode? = null,
     val mediaType: MediaType = MANGA,
+    val userAgent: String? = null,
 
     val authorRoles: Collection<AuthorRole> = listOf(WRITER),
     val artistRoles: Collection<AuthorRole> = listOf(PENCILLER, INKER, COLORIST, LETTERER, COVER),
@@ -65,6 +66,7 @@ data class MangaBakaConfig(
     val seriesMetadata: SeriesMetadataConfig = SeriesMetadataConfig(),
     val nameMatchingMode: NameMatchingMode? = null,
     val mediaType: MediaType = MANGA,
+    val userAgent: String? = null,
 
     val authorRoles: Collection<AuthorRole> = listOf(WRITER),
     val artistRoles: Collection<AuthorRole> = listOf(PENCILLER, INKER, COLORIST, LETTERER, COVER),
@@ -84,6 +86,7 @@ data class AniListConfig(
     val seriesMetadata: SeriesMetadataConfig = SeriesMetadataConfig(),
     val nameMatchingMode: NameMatchingMode? = null,
     val mediaType: MediaType = MANGA,
+    val userAgent: String? = null,
 
     val authorRoles: Collection<AuthorRole> = listOf(WRITER),
     val artistRoles: Collection<AuthorRole> = listOf(PENCILLER, INKER, COLORIST, LETTERER, COVER),
@@ -99,6 +102,7 @@ data class MangaDexConfig(
     val bookMetadata: BookMetadataConfig = BookMetadataConfig(),
     val nameMatchingMode: NameMatchingMode? = null,
     val mediaType: MediaType = MANGA,
+    val userAgent: String? = null,
 
     val coverLanguages: List<String> = listOf("en", "ja"),
     val links: List<MangaDexLink> = emptyList(),

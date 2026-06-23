@@ -185,6 +185,7 @@ class AppConfigMapper {
             priority = config.priority,
             enabled = config.enabled,
             mediaType = config.mediaType.fromMediaType(),
+            userAgent = config.userAgent,
             authorRoles = config.authorRoles.map { it.fromAuthorRole() },
             artistRoles = config.artistRoles.map { it.fromAuthorRole() },
             seriesMetadata = toDto(config.seriesMetadata),
@@ -198,6 +199,7 @@ class AppConfigMapper {
             priority = config.priority,
             enabled = config.enabled,
             mediaType = config.mediaType.fromMediaType(),
+            userAgent = config.userAgent,
 
             authorRoles = config.authorRoles.map { it.fromAuthorRole() },
             artistRoles = config.artistRoles.map { it.fromAuthorRole() },
@@ -216,6 +218,7 @@ class AppConfigMapper {
             bookMetadata = toDto(config.bookMetadata),
             nameMatchingMode = config.nameMatchingMode?.fromNameMatchingMode(),
             mediaType = config.mediaType.fromMediaType(),
+            userAgent = config.userAgent,
 
             authorRoles = config.authorRoles.map { it.fromAuthorRole() },
             artistRoles = config.artistRoles.map { it.fromAuthorRole() },
@@ -230,6 +233,7 @@ class AppConfigMapper {
             priority = config.priority,
             enabled = config.enabled,
             mediaType = config.mediaType.fromMediaType(),
+            userAgent = config.userAgent,
             authorRoles = config.authorRoles.map { it.fromAuthorRole() },
             artistRoles = config.artistRoles.map { it.fromAuthorRole() },
             seriesMetadata = toDto(config.seriesMetadata),

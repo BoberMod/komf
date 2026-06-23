@@ -121,6 +121,7 @@ class ProviderConfigUpdateRequest(
     val bookMetadata: PatchValue<BookMetadataConfigUpdateRequest> = PatchValue.Unset,
     val nameMatchingMode: PatchValue<KomfNameMatchingMode> = PatchValue.Unset,
     val mediaType: PatchValue<KomfMediaType> = PatchValue.Unset,
+    val userAgent: PatchValue<String> = PatchValue.Unset,
 
     val authorRoles: PatchValue<Collection<KomfAuthorRole>> = PatchValue.Unset,
     val artistRoles: PatchValue<Collection<KomfAuthorRole>> = PatchValue.Unset,
@@ -133,6 +134,7 @@ class AniListConfigUpdateRequest(
     val seriesMetadata: PatchValue<SeriesMetadataConfigUpdateRequest> = PatchValue.Unset,
     val nameMatchingMode: PatchValue<KomfNameMatchingMode> = PatchValue.Unset,
     val mediaType: PatchValue<KomfMediaType> = PatchValue.Unset,
+    val userAgent: PatchValue<String> = PatchValue.Unset,
 
     val authorRoles: PatchValue<Collection<KomfAuthorRole>> = PatchValue.Unset,
     val artistRoles: PatchValue<Collection<KomfAuthorRole>> = PatchValue.Unset,
@@ -148,6 +150,7 @@ class MangaDexConfigUpdateRequest(
     val bookMetadata: PatchValue<BookMetadataConfigUpdateRequest> = PatchValue.Unset,
     val nameMatchingMode: PatchValue<KomfNameMatchingMode> = PatchValue.Unset,
     val mediaType: PatchValue<KomfMediaType> = PatchValue.Unset,
+    val userAgent: PatchValue<String> = PatchValue.Unset,
 
     val authorRoles: PatchValue<Collection<KomfAuthorRole>> = PatchValue.Unset,
     val artistRoles: PatchValue<Collection<KomfAuthorRole>> = PatchValue.Unset,
@@ -163,6 +166,7 @@ class MangaBakaConfigUpdateRequest(
     val seriesMetadata: PatchValue<SeriesMetadataConfigUpdateRequest> = PatchValue.Unset,
     val nameMatchingMode: PatchValue<KomfNameMatchingMode> = PatchValue.Unset,
     val mediaType: PatchValue<KomfMediaType> = PatchValue.Unset,
+    val userAgent: PatchValue<String> = PatchValue.Unset,
 
     val authorRoles: PatchValue<Collection<KomfAuthorRole>> = PatchValue.Unset,
     val artistRoles: PatchValue<Collection<KomfAuthorRole>> = PatchValue.Unset,

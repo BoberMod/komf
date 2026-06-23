@@ -182,6 +182,11 @@ class AppConfigUpdateMapper {
                 PatchValue.None -> null
                 is PatchValue.Some -> mode.value.toNameMatchingMode()
                 PatchValue.Unset -> config.nameMatchingMode
+            },
+            userAgent = when (val ua = patch.userAgent) {
+                PatchValue.None -> null
+                is PatchValue.Some -> ua.value
+                PatchValue.Unset -> config.userAgent
             }
         )
     }
@@ -202,6 +207,11 @@ class AppConfigUpdateMapper {
                 PatchValue.None -> null
                 is PatchValue.Some -> mode.value.toNameMatchingMode()
                 PatchValue.Unset -> config.nameMatchingMode
+            },
+            userAgent = when (val ua = patch.userAgent) {
+                PatchValue.None -> null
+                is PatchValue.Some -> ua.value
+                PatchValue.Unset -> config.userAgent
             }
         )
     }
@@ -225,7 +235,12 @@ class AppConfigUpdateMapper {
                 PatchValue.Unset -> config.nameMatchingMode
             },
             coverLanguages = patch.coverLanguages.getOrNull() ?: config.coverLanguages,
-            links = patch.links.getOrNull()?.map { MangaDexLink.valueOf(it.name) } ?: config.links
+            links = patch.links.getOrNull()?.map { MangaDexLink.valueOf(it.name) } ?: config.links,
+            userAgent = when (val ua = patch.userAgent) {
+                PatchValue.None -> null
+                is PatchValue.Some -> ua.value
+                PatchValue.Unset -> config.userAgent
+            }
         )
     }
 
@@ -244,7 +259,12 @@ class AppConfigUpdateMapper {
                 is PatchValue.Some -> mode.value.toNameMatchingMode()
                 PatchValue.Unset -> config.nameMatchingMode
             },
-            mode = patch.mode.getOrNull()?.toMangaBakaMode() ?: config.mode
+            mode = patch.mode.getOrNull()?.toMangaBakaMode() ?: config.mode,
+            userAgent = when (val ua = patch.userAgent) {
+                PatchValue.None -> null
+                is PatchValue.Some -> ua.value
+                PatchValue.Unset -> config.userAgent
+            }
         )
     }
 
