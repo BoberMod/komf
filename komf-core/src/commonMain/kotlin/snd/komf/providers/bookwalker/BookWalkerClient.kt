@@ -12,6 +12,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import snd.komf.browser.HtmlFetcher
 import snd.komf.model.Image
 import snd.komf.providers.bookwalker.model.BookWalkerBook
 import snd.komf.providers.bookwalker.model.BookWalkerBookId
@@ -25,7 +26,8 @@ const val bookWalkerBaseUrl = "https://global.bookwalker.jp"
 
 class BookWalkerClient(
     ktor: HttpClient,
-    json: Json
+    json: Json,
+    private val htmlFetcher: HtmlFetcher? = null,
 ) {
     private val parser = BookWalkerParser()
     private val apiClient = ktor.config { install(ContentNegotiation) { json(json) } }
@@ -40,11 +42,16 @@ class BookWalkerClient(
     suspend fun searchSeries(name: String, category: BookWalkerCategory): Collection<BookWalkerSearchResult> {
 
         return try {
-            val document = htmlClient.get("$bookWalkerBaseUrl/search/") {
-                parameter("word", name)
-                parameter("qcat", category.number)
-                parameter("np", 0)
-            }.bodyAsText()
+            val url = "$bookWalkerBaseUrl/search/?word=$name&qcat=${category.number}&np=0"
+            val document = if (htmlFetcher != null) {
+                htmlFetcher.fetchHtml(url)
+            } else {
+                htmlClient.get("$bookWalkerBaseUrl/search/") {
+                    parameter("word", name)
+                    parameter("qcat", category.number)
+                    parameter("np", 0)
+                }.bodyAsText()
+            }
             parser.parseSearchResults(document)
         } catch (e: ClientRequestException) {
             if (e.response.status == HttpStatusCode.NotFound) emptyList()
@@ -54,14 +61,24 @@ class BookWalkerClient(
     }
 
     suspend fun getSeriesBooks(id: BookWalkerSeriesId, page: Int): BookWalkerBookListPage {
-        val document = htmlClient.get("$bookWalkerBaseUrl/series/${id.id}/") {
-            parameter("page", page)
-        }.bodyAsText()
+        val url = "$bookWalkerBaseUrl/series/${id.id}/?page=$page"
+        val document = if (htmlFetcher != null) {
+            htmlFetcher.fetchHtml(url)
+        } else {
+            htmlClient.get("$bookWalkerBaseUrl/series/${id.id}/") {
+                parameter("page", page)
+            }.bodyAsText()
+        }
         return parser.parseSeriesBooks(document)
     }
 
     suspend fun getBook(id: BookWalkerBookId): BookWalkerBook {
-        val document = htmlClient.get("$bookWalkerBaseUrl/${id.id}/").bodyAsText()
+        val url = "$bookWalkerBaseUrl/${id.id}/"
+        val document = if (htmlFetcher != null) {
+            htmlFetcher.fetchHtml(url)
+        } else {
+            htmlClient.get(url).bodyAsText()
+        }
         return parser.parseBook(document)
     }
 
