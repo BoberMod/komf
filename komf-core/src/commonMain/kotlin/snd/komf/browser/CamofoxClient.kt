@@ -13,6 +13,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 private val logger = KotlinLogging.logger {}
@@ -27,7 +28,10 @@ class CamofoxClient(
 ) {
     private val baseUrl = config.baseUrl.trimEnd('/')
     private val userId = config.userId
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json { 
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
     /**
      * Creates a new browser tab and navigates to the specified URL.
@@ -37,13 +41,14 @@ class CamofoxClient(
      */
     suspend fun createTab(url: String, sessionKey: String = "default"): TabInfo {
         logger.debug { "Creating tab for URL: $url" }
+        val requestBody = json.encodeToString(CreateTabRequest.serializer(), CreateTabRequest(
+            userId = userId,
+            url = url,
+            sessionKey = sessionKey
+        ))
         val response = httpClient.post("$baseUrl/tabs") {
             contentType(ContentType.Application.Json)
-            setBody(CreateTabRequest(
-                userId = userId,
-                url = url,
-                sessionKey = sessionKey
-            ))
+            setBody(requestBody)
         }
         return response.body()
     }
