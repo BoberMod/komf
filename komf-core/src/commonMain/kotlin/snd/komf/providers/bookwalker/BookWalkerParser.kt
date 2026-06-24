@@ -129,9 +129,37 @@ class BookWalkerParser {
         }
         
         // New format: parse chapter-based series page
-        // Extract series info from the page
-        parserLogger.debug { "Parsing new series page format" }
-        return BookWalkerBookListPage(page = 1, totalPages = 1, books = emptyList())
+        // Chapters are displayed as "CH 1", "CH 2", etc.
+        val books = parseChapterBooks(document)
+        parserLogger.debug { "Parsed ${books.size} chapter books from series page" }
+        return BookWalkerBookListPage(page = 1, totalPages = 1, books = books)
+    }
+    
+    private fun parseChapterBooks(document: Document): List<BookWalkerSeriesBook> {
+        val books = mutableListOf<BookWalkerSeriesBook>()
+        
+        // Get body text
+        val bodyText = document.body()?.text() ?: return books
+        
+        // Simple pattern: "Chapter {num}"
+        val chapterPattern = Regex("Chapter\\s+(\\d+)")
+        val matches = chapterPattern.findAll(bodyText)
+        
+        for (match in matches) {
+            val chapterNum = match.groupValues[1].toDoubleOrNull() ?: continue
+            
+            // Avoid duplicates
+            if (books.any { it.number?.start == chapterNum }) continue
+            
+            books.add(BookWalkerSeriesBook(
+                id = BookWalkerBookId("chapter-${chapterNum.toInt()}"),
+                name = match.value,
+                number = BookRange(chapterNum, chapterNum)
+            ))
+        }
+        
+        parserLogger.debug { "Parsed ${books.size} chapter books from series page" }
+        return books
     }
     
     fun parseSeriesCoverFromHtml(html: String): String? {
