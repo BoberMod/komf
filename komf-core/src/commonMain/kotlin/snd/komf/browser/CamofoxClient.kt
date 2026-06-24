@@ -30,7 +30,7 @@ class CamofoxClient(
     private val baseUrl = config.baseUrl.trimEnd('/')
     private val userId = config.userId
     private val accessKey = config.accessKey
-    private val json = Json { 
+    private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
@@ -41,12 +41,6 @@ class CamofoxClient(
         }
     }
 
-    /**
-     * Creates a new browser tab and navigates to the specified URL.
-     * @param url The URL to navigate to
-     * @param sessionKey Optional session key for tab grouping
-     * @return Tab information including the tab ID
-     */
     suspend fun createTab(url: String, sessionKey: String = "default"): TabInfo {
         logger.debug { "Creating tab for URL: $url" }
         val requestBody = json.encodeToString(CreateTabRequest.serializer(), CreateTabRequest(
@@ -55,19 +49,13 @@ class CamofoxClient(
             sessionKey = sessionKey
         ))
         val response = httpClient.post("$baseUrl/tabs") {
+            addAuth()
             contentType(ContentType.Application.Json)
             setBody(requestBody)
         }
         return response.body()
     }
 
-    /**
-     * Gets the accessibility snapshot of a tab.
-     * @param tabId The tab ID
-     * @param includeScreenshot Whether to include a base64 PNG screenshot
-     * @param offset Pagination offset for large snapshots
-     * @return The accessibility snapshot with element refs
-     */
     suspend fun getSnapshot(
         tabId: String,
         includeScreenshot: Boolean = false,
@@ -75,6 +63,7 @@ class CamofoxClient(
     ): SnapshotResponse {
         logger.debug { "Getting snapshot for tab: $tabId" }
         val response = httpClient.get("$baseUrl/tabs/$tabId/snapshot") {
+            addAuth()
             parameter("userId", userId)
             if (includeScreenshot) parameter("includeScreenshot", "true")
             if (offset != null) parameter("offset", offset)
@@ -82,16 +71,10 @@ class CamofoxClient(
         return response.body()
     }
 
-    /**
-     * Navigates a tab to a URL or search macro.
-     * @param tabId The tab ID
-     * @param url The URL to navigate to
-     * @param macro Optional search macro (e.g., @google_search)
-     * @param query Optional search query for macros
-     */
     suspend fun navigate(tabId: String, url: String? = null, macro: String? = null, query: String? = null) {
         logger.debug { "Navigating tab $tabId to: ${url ?: macro}" }
         httpClient.post("$baseUrl/tabs/$tabId/navigate") {
+            addAuth()
             contentType(ContentType.Application.Json)
             setBody(NavigateRequest(
                 userId = userId,
@@ -102,15 +85,10 @@ class CamofoxClient(
         }
     }
 
-    /**
-     * Clicks an element by ref or CSS selector.
-     * @param tabId The tab ID
-     * @param ref Element reference (e.g., "e1")
-     * @param selector CSS selector
-     */
     suspend fun click(tabId: String, ref: String? = null, selector: String? = null) {
         logger.debug { "Clicking element in tab $tabId: ref=$ref, selector=$selector" }
         httpClient.post("$baseUrl/tabs/$tabId/click") {
+            addAuth()
             contentType(ContentType.Application.Json)
             setBody(ClickRequest(
                 userId = userId,
@@ -120,16 +98,10 @@ class CamofoxClient(
         }
     }
 
-    /**
-     * Types text into an element.
-     * @param tabId The tab ID
-     * @param ref Element reference
-     * @param text Text to type
-     * @param pressEnter Whether to press Enter after typing
-     */
     suspend fun type(tabId: String, ref: String, text: String, pressEnter: Boolean = false) {
         logger.debug { "Typing into tab $tabId: ref=$ref" }
         httpClient.post("$baseUrl/tabs/$tabId/type") {
+            addAuth()
             contentType(ContentType.Application.Json)
             setBody(TypeRequest(
                 userId = userId,
@@ -140,14 +112,10 @@ class CamofoxClient(
         }
     }
 
-    /**
-     * Scrolls the page.
-     * @param tabId The tab ID
-     * @param direction Scroll direction (up, down, left, right)
-     */
     suspend fun scroll(tabId: String, direction: String = "down") {
         logger.debug { "Scrolling tab $tabId: $direction" }
         httpClient.post("$baseUrl/tabs/$tabId/scroll") {
+            addAuth()
             contentType(ContentType.Application.Json)
             setBody(ScrollRequest(
                 userId = userId,
@@ -156,14 +124,11 @@ class CamofoxClient(
         }
     }
 
-    /**
-     * Closes a specific tab.
-     * @param tabId The tab ID
-     */
     suspend fun closeTab(tabId: String) {
         logger.debug { "Closing tab: $tabId" }
         try {
             httpClient.delete("$baseUrl/tabs/$tabId") {
+                addAuth()
                 parameter("userId", userId)
             }
         } catch (e: ClientRequestException) {
@@ -171,41 +136,30 @@ class CamofoxClient(
         }
     }
 
-    /**
-     * Lists all open tabs for the user.
-     * @return List of tab information
-     */
     suspend fun listTabs(): List<TabInfo> {
         logger.debug { "Listing tabs for user: $userId" }
         return httpClient.get("$baseUrl/tabs") {
+            addAuth()
             parameter("userId", userId)
         }.body()
     }
 
-    /**
-     * Closes all tabs and sessions for the user.
-     */
     suspend fun closeAllSessions() {
         logger.debug { "Closing all sessions for user: $userId" }
         try {
-            httpClient.delete("$baseUrl/sessions/$userId")
+            httpClient.delete("$baseUrl/sessions/$userId") {
+                addAuth()
+            }
         } catch (e: ClientRequestException) {
             if (e.response.status != HttpStatusCode.NotFound) throw e
         }
     }
 
-    /**
-     * Gets the page HTML by navigating and extracting from snapshot.
-     * @param url The URL to fetch
-     * @return The page HTML content
-     */
     suspend fun getPageHtml(url: String): String {
         val tab = createTab(url)
         val tabId = tab.effectiveId()
         try {
-            // Wait for page to load and Cloudflare challenge to complete
             waitForSelector(tabId, "body", 10000)
-            // Get HTML via JavaScript evaluation
             val html = evaluateJs(tabId, "document.documentElement.outerHTML")
             return html
         } finally {
@@ -239,10 +193,6 @@ class CamofoxClient(
         return response.result ?: ""
     }
 
-    /**
-     * Checks if the Camofox server is healthy.
-     * @return true if server is reachable
-     */
     suspend fun healthCheck(): Boolean {
         return try {
             val response = httpClient.get("$baseUrl/health")
@@ -253,8 +203,6 @@ class CamofoxClient(
         }
     }
 }
-
-// Request/Response models
 
 @Serializable
 data class CamofoxConfig(
