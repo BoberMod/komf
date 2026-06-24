@@ -53,18 +53,41 @@ class BookWalkerParser {
         parserLogger.info { "BookWalkerParser: Found ${seriesLinks.size} series links" }
         val seenIds = mutableSetOf<String>()
         
-        for (link in seriesLinks) {
+        for ((index, link) in seriesLinks.withIndex()) {
             val href = link.attr("href")
-            if (!href.contains("/series/")) continue
+            parserLogger.debug { "Link $index: href=$href" }
+            if (!href.contains("/series/")) {
+                parserLogger.debug { "Link $index: skipped - no /series/ in href" }
+                continue
+            }
+            
+            // Skip image links (they have aria-label="Cover" or empty, and no useful text)
+            val ariaLabel = link.attr("aria-label")
+            if (ariaLabel == "Cover" || link.hasClass("book-card-grid-view-module__A8__ha__image")) {
+                parserLogger.debug { "Link $index: skipped - image link (aria-label='$ariaLabel')" }
+                continue
+            }
             
             // Parse series ID from href like /series/27J7TDKH5FD0/a-dating-sim-of-life-or-death
-            val seriesId = parseNewSeriesId(href) ?: continue
-            if (seenIds.contains(seriesId.id)) continue
+            val seriesId = parseNewSeriesId(href)
+            if (seriesId == null) {
+                parserLogger.debug { "Link $index: failed to parse seriesId from $href" }
+                continue
+            }
+            if (seenIds.contains(seriesId.id)) {
+                parserLogger.debug { "Link $index: skipped - duplicate seriesId ${seriesId.id}" }
+                continue
+            }
             seenIds.add(seriesId.id)
             
             // Get title from the link text or aria-label
-            val title = link.attr("aria-label").ifEmpty { link.text() }.trim()
-            if (title.isEmpty()) continue
+            val linkText = link.text().trim()
+            val title = ariaLabel.ifEmpty { linkText }
+            parserLogger.debug { "Link $index: ariaLabel='$ariaLabel', text='$linkText', title='$title'" }
+            if (title.isEmpty()) {
+                parserLogger.debug { "Link $index: skipped - empty title" }
+                continue
+            }
             
             // Get thumbnail from nearby img element
             val imageUrl = link.select("img").firstOrNull()?.let { img ->
