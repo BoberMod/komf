@@ -193,13 +193,14 @@ class CamofoxClient(
      */
     suspend fun getPageHtml(url: String): String {
         val tab = createTab(url)
+        val tabId = tab.effectiveId()
         try {
             // Wait for page to load
             kotlinx.coroutines.delay(2000)
-            val snapshot = getSnapshot(tab.id)
+            val snapshot = getSnapshot(tabId)
             return snapshot.snapshot
         } finally {
-            closeTab(tab.id)
+            closeTab(tabId)
         }
     }
 
@@ -237,11 +238,14 @@ data class CreateTabRequest(
 
 @Serializable
 data class TabInfo(
-    val id: String,
-    val url: String,
-    val userId: String,
+    val tabId: String = "",
+    val url: String = "",
+    val id: String = "",
+    val userId: String = "",
     val sessionKey: String = "default",
-)
+) {
+    fun effectiveId(): String = tabId.ifEmpty { id }
+}
 
 @Serializable
 data class SnapshotResponse(
