@@ -139,11 +139,13 @@ class ProvidersModule(
 
     // Camofox browser client for anti-detection web scraping
     val camofoxClient: CamofoxClient? = if (config.camofox.enabled) {
+        logger.info { "Camofox browser enabled: ${config.camofox.baseUrl}" }
         CamofoxClient(
-            httpClient = baseHttpClient,
+            httpClient = baseHttpClientJson,
             config = config.camofox
         )
     } else {
+        logger.info { "Camofox browser disabled, using direct HTTP" }
         null
     }
 

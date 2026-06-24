@@ -35,7 +35,7 @@ class CamofoxClient(
      * @param sessionKey Optional session key for tab grouping
      * @return Tab information including the tab ID
      */
-    suspend fun createTab(url: String, sessionKey: String? = null): TabInfo {
+    suspend fun createTab(url: String, sessionKey: String = "default"): TabInfo {
         logger.debug { "Creating tab for URL: $url" }
         val response = httpClient.post("$baseUrl/tabs") {
             contentType(ContentType.Application.Json)
@@ -227,7 +227,7 @@ data class CamofoxConfig(
 data class CreateTabRequest(
     val userId: String,
     val url: String,
-    val sessionKey: String? = null,
+    val sessionKey: String = "default",
 )
 
 @Serializable
@@ -235,7 +235,7 @@ data class TabInfo(
     val id: String,
     val url: String,
     val userId: String,
-    val sessionKey: String? = null,
+    val sessionKey: String = "default",
 )
 
 @Serializable
