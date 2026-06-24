@@ -28,13 +28,13 @@ private val logger = KotlinLogging.logger {}
 const val bookWalkerBaseUrl = "https://bookwalker.com"
 
 class BookWalkerClient(
-    ktor: HttpClient,
+    val httpClient: HttpClient,
     json: Json,
     private val htmlFetcher: HtmlFetcher? = null,
 ) {
     private val parser = BookWalkerParser()
-    private val apiClient = ktor.config { install(ContentNegotiation) { json(json) } }
-    private val htmlClient = ktor.config {
+    private val apiClient = httpClient.config { install(ContentNegotiation) { json(json) } }
+    private val htmlClient = httpClient.config {
         defaultRequest {
             cookie("safeSearch", "111")
             cookie("glSafeSearch", "1")
@@ -101,5 +101,24 @@ class BookWalkerClient(
     suspend fun getThumbnail(url: String): Image? {
         val bytes: ByteArray = apiClient.get(url).body()
         return Image(bytes)
+    }
+
+    suspend fun getSeriesCoverUrl(seriesId: BookWalkerSeriesId): String? {
+        val url = "$bookWalkerBaseUrl/series/${seriesId.id}"
+        val document = if (htmlFetcher != null) {
+            htmlFetcher.fetchHtml(url)
+        } else {
+            htmlClient.get(url).bodyAsText()
+        }
+        return parser.parseSeriesCoverFromHtml(document)
+    }
+
+    suspend fun getSeriesCoverFromPage(seriesId: BookWalkerSeriesId): Image? {
+        val coverUrl = getSeriesCoverUrl(seriesId) ?: return null
+        return try {
+            getThumbnail(coverUrl)
+        } catch (e: Exception) {
+            null
+        }
     }
 }

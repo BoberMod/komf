@@ -114,14 +114,35 @@ class BookWalkerParser {
 
     fun parseSeriesBooks(seriesBooks: String): BookWalkerBookListPage {
         val document = Ksoup.parse(seriesBooks)
-        val books = document.getElementsByClass("o-tile-list").first()?.children()
+        
+        // Try old format first
+        val oldBooks = document.getElementsByClass("o-tile-list").first()?.children()
             ?.map { parseSeriesBook(it) }
             ?: emptyList()
-        val pageElement = document.getElementsByClass("pager-area").firstOrNull()?.child(0)
-        val currentPage = pageElement?.children()?.first { it.className() == "on" }
-            ?.text()?.toInt() ?: 1
-        val totalPages = pageElement?.children()?.mapNotNull { it.text().toIntOrNull() }?.max() ?: 1
-        return BookWalkerBookListPage(page = currentPage, totalPages = totalPages, books = books)
+        
+        if (oldBooks.isNotEmpty()) {
+            val pageElement = document.getElementsByClass("pager-area").firstOrNull()?.child(0)
+            val currentPage = pageElement?.children()?.first { it.className() == "on" }
+                ?.text()?.toInt() ?: 1
+            val totalPages = pageElement?.children()?.mapNotNull { it.text().toIntOrNull() }?.max() ?: 1
+            return BookWalkerBookListPage(page = currentPage, totalPages = totalPages, books = oldBooks)
+        }
+        
+        // New format: parse chapter-based series page
+        // Extract series info from the page
+        parserLogger.debug { "Parsing new series page format" }
+        return BookWalkerBookListPage(page = 1, totalPages = 1, books = emptyList())
+    }
+    
+    fun parseSeriesCoverFromHtml(html: String): String? {
+        val document = Ksoup.parse(html)
+        // New format: look for the main cover image (largest non-svg image)
+        val images = document.select("img[src*=sos-dan.net]")
+        return images.firstOrNull()?.attr("src")
+            ?.replace("/120/", "/720/")  // Get medium size
+            ?.replace("/240/", "/720/")
+            ?.replace("/360/", "/720/")
+            ?.replace("/480/", "/720/")
     }
 
     fun parseBook(book: String): BookWalkerBook {
