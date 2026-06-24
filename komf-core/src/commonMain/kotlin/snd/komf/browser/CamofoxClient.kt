@@ -156,11 +156,17 @@ class CamofoxClient(
     }
 
     suspend fun getPageHtml(url: String): String {
+        logger.info { "Camofox navigating to: $url" }
         val tab = createTab(url)
         val tabId = tab.effectiveId()
         try {
             waitForSelector(tabId, "body", 10000)
+            val pageUrl = evaluateJs(tabId, "window.location.href")
+            val pageTitle = evaluateJs(tabId, "document.title")
+            val isChallenge = evaluateJs(tabId, "document.querySelector('#challenge-running, #challenge-form, [data-cf-challenge]') !== null || document.title.includes('Just a moment')")
+            logger.info { "Camofox page loaded: url=$pageUrl, title=$pageTitle, isCloudflareChallenge=$isChallenge" }
             val html = evaluateJs(tabId, "document.documentElement.outerHTML")
+            logger.info { "Camofox got HTML: ${html.length} bytes" }
             return html
         } finally {
             closeTab(tabId)
