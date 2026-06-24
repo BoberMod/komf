@@ -34,7 +34,7 @@ class CamofoxHtmlFetcher(
     private val camofoxClient: CamofoxClient,
 ) : HtmlFetcher {
     override suspend fun fetchHtml(url: String): String {
-        logger.debug { "Fetching HTML via Camofox browser: $url" }
+        logger.info { "Fetching via Camofox browser: $url" }
         return camofoxClient.getPageHtml(url)
     }
 }
