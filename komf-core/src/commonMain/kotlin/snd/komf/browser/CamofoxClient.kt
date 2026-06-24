@@ -195,13 +195,38 @@ class CamofoxClient(
         val tab = createTab(url)
         val tabId = tab.effectiveId()
         try {
-            // Wait for page to load
-            kotlinx.coroutines.delay(2000)
-            val snapshot = getSnapshot(tabId)
-            return snapshot.snapshot
+            // Wait for page to load and Cloudflare challenge to complete
+            waitForSelector(tabId, "body", 10000)
+            // Get HTML via JavaScript evaluation
+            val html = evaluateJs(tabId, "document.documentElement.outerHTML")
+            return html
         } finally {
             closeTab(tabId)
         }
+    }
+
+    suspend fun waitForSelector(tabId: String, selector: String, timeout: Long = 10000) {
+        logger.debug { "Waiting for selector '$selector' in tab $tabId" }
+        httpClient.post("$baseUrl/tabs/$tabId/wait") {
+            contentType(ContentType.Application.Json)
+            setBody(json.encodeToString(WaitRequest.serializer(), WaitRequest(
+                userId = userId,
+                selector = selector,
+                timeout = timeout
+            )))
+        }
+    }
+
+    suspend fun evaluateJs(tabId: String, expression: String): String {
+        logger.debug { "Evaluating JS in tab $tabId" }
+        val response: EvaluateResponse = httpClient.post("$baseUrl/tabs/$tabId/evaluate") {
+            contentType(ContentType.Application.Json)
+            setBody(json.encodeToString(EvaluateRequest.serializer(), EvaluateRequest(
+                userId = userId,
+                expression = expression
+            )))
+        }.body()
+        return response.result ?: ""
     }
 
     /**
@@ -280,4 +305,23 @@ data class TypeRequest(
 data class ScrollRequest(
     val userId: String,
     val direction: String = "down",
+)
+
+@Serializable
+data class WaitRequest(
+    val userId: String,
+    val selector: String,
+    val timeout: Long = 10000,
+)
+
+@Serializable
+data class EvaluateRequest(
+    val userId: String,
+    val expression: String,
+)
+
+@Serializable
+data class EvaluateResponse(
+    val ok: Boolean = true,
+    val result: String? = null,
 )
