@@ -157,14 +157,35 @@ class CamofoxClient(
 
     suspend fun getPageHtml(url: String): String {
         logger.info { "Camofox navigating to: $url" }
+        val startTime = System.currentTimeMillis()
         val tab = createTab(url)
         val tabId = tab.effectiveId()
         try {
             waitForSelector(tabId, "body", 10000)
+            val waitTime = System.currentTimeMillis() - startTime
+            
+            // Check page status
             val pageUrl = evaluateJs(tabId, "window.location.href")
             val pageTitle = evaluateJs(tabId, "document.title")
-            val isChallenge = evaluateJs(tabId, "document.querySelector('#challenge-running, #challenge-form, [data-cf-challenge]') !== null || document.title.includes('Just a moment')")
-            logger.info { "Camofox page loaded: url=$pageUrl, title=$pageTitle, isCloudflareChallenge=$isChallenge" }
+            
+            // Detect Cloudflare challenge type
+            val challengeCheck = evaluateJs(tabId, """
+                (function() {
+                    var title = document.title || '';
+                    var hasChallenge = title.includes('Just a moment') || title.includes('Checking your browser');
+                    var hasCaptcha = !!document.querySelector('#challenge-running, [data-cf-challenge], .cf-turnstile, iframe[src*="challenges.cloudflare.com"]');
+                    var hasInput = !!document.querySelector('input[type="captcha"], .g-recaptcha, #g-recaptcha-response');
+                    return JSON.stringify({
+                        hasChallenge: hasChallenge,
+                        hasCaptcha: hasCaptcha,
+                        hasInput: hasInput,
+                        url: window.location.href
+                    });
+                })()
+            """)
+            
+            logger.info { "Camofox page status after ${waitTime}ms: url=$pageUrl, title=$pageTitle, challenge=$challengeCheck" }
+            
             val html = evaluateJs(tabId, "document.documentElement.outerHTML")
             logger.info { "Camofox got HTML: ${html.length} bytes" }
             return html
