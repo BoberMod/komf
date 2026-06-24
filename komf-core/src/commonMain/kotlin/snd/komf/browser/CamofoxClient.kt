@@ -29,15 +29,15 @@ class CamofoxClient(
 ) {
     private val baseUrl = config.baseUrl.trimEnd('/')
     private val userId = config.userId
-    private val apiKey = config.apiKey
+    private val accessKey = config.accessKey
     private val json = Json { 
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
 
     private fun io.ktor.client.request.HttpRequestBuilder.addAuth() {
-        if (apiKey != null) {
-            bearerAuth(apiKey)
+        if (accessKey != null) {
+            bearerAuth(accessKey)
         }
     }
 
@@ -260,7 +260,7 @@ class CamofoxClient(
 data class CamofoxConfig(
     val enabled: Boolean = false,
     val baseUrl: String = "http://localhost:9377",
-    val apiKey: String? = null,
+    val accessKey: String? = null,
     val userId: String = "komf",
 )
 
