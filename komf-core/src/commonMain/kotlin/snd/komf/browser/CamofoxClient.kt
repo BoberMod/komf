@@ -165,6 +165,8 @@ class CamofoxClient(
      * Uses mutex to ensure sequential requests (parallel requests break Cloudflare).
      */
     suspend fun getPageHtml(url: String): String = requestMutex.withLock {
+        // Add delay between requests to avoid Cloudflare rate limiting
+        kotlinx.coroutines.delay(3000)
         logger.info { "Camofox navigating to: $url" }
         val startTime = System.currentTimeMillis()
         val tab = createTab(url)
@@ -191,7 +193,26 @@ class CamofoxClient(
             val waitTime = System.currentTimeMillis() - startTime
             
             if (isChallenge) {
-                logger.warn { "Camofox Cloudflare challenge NOT passed after ${waitTime}ms, returning page as-is" }
+                logger.warn { "Camofox Cloudflare challenge NOT passed after ${waitTime}ms, cleaning session and retrying" }
+                // Clean up failed session to avoid rate limiting
+                closeTab(tabId)
+                closeAllSessions()
+                kotlinx.coroutines.delay(5000)
+                
+                // Retry once with fresh session
+                logger.info { "Camofox retrying with fresh session: $url" }
+                val retryTab = createTab(url)
+                val retryTabId = retryTab.effectiveId()
+                try {
+                    kotlinx.coroutines.delay(10000)
+                    val retryTitle = evaluateJs(retryTabId, "document.title")
+                    logger.info { "Camofox retry result: $retryTitle" }
+                    val html = evaluateJs(retryTabId, "document.documentElement.outerHTML")
+                    logger.info { "Camofox got HTML: ${html.length} bytes" }
+                    return html
+                } finally {
+                    closeTab(retryTabId)
+                }
             }
             
             val pageUrl = evaluateJs(tabId, "window.location.href")
