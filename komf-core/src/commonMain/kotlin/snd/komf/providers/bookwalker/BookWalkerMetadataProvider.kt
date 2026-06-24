@@ -63,12 +63,17 @@ class BookWalkerMetadataProvider(
     }
 
     override suspend fun getSeriesCover(seriesId: ProviderSeriesId): Image? {
+        // Try to get cover directly from series page (works for both old and new formats)
+        val coverFromPage = client.getSeriesCoverFromPage(BookWalkerSeriesId(seriesId.value))
+        if (coverFromPage != null) return coverFromPage
+        
+        // Fallback: try to get cover from first book
         val books = getAllBooks(BookWalkerSeriesId(seriesId.value))
-        if (books.isEmpty()) {
-            // New format: try to get cover directly from series page
-            return client.getSeriesCoverFromPage(BookWalkerSeriesId(seriesId.value))
-        }
-        return fetchCover(getFirstBook(books))
+        if (books.isEmpty()) return null
+        
+        // Only try getFirstBook if we have real book IDs (not chapter-*)
+        val firstBook = books.firstOrNull { !it.id.id.startsWith("chapter-") } ?: return null
+        return fetchCover(bookCache.get(firstBook.id) { client.getBook(firstBook.id) })
     }
 
     override suspend fun getBookMetadata(seriesId: ProviderSeriesId, bookId: ProviderBookId): ProviderBookMetadata {
