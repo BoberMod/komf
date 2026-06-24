@@ -1,5 +1,6 @@
 package snd.komf.providers.bookwalker
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
@@ -22,6 +23,8 @@ import snd.komf.providers.bookwalker.model.BookWalkerCategory
 import snd.komf.providers.bookwalker.model.BookWalkerSearchResult
 import snd.komf.providers.bookwalker.model.BookWalkerSeriesId
 
+private val logger = KotlinLogging.logger {}
+
 const val bookWalkerBaseUrl = "https://global.bookwalker.jp"
 
 class BookWalkerClient(
@@ -43,9 +46,12 @@ class BookWalkerClient(
 
         return try {
             val url = "$bookWalkerBaseUrl/search/?word=$name&qcat=${category.number}&np=0"
+            logger.info { "BookWalker htmlFetcher is: ${if (htmlFetcher != null) "available" else "null"}" }
             val document = if (htmlFetcher != null) {
+                logger.info { "BookWalker using Camofox: $url" }
                 htmlFetcher.fetchHtml(url)
             } else {
+                logger.info { "BookWalker using direct HTTP: $url" }
                 htmlClient.get("$bookWalkerBaseUrl/search/") {
                     parameter("word", name)
                     parameter("qcat", category.number)
