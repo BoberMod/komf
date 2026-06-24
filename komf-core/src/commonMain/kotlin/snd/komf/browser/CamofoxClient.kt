@@ -13,6 +13,8 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -22,6 +24,7 @@ private val logger = KotlinLogging.logger {}
 /**
  * Client for Camofox Browser REST API.
  * Provides anti-detection browser capabilities for web scraping.
+ * Uses mutex to ensure sequential requests (parallel requests break Cloudflare challenges).
  */
 class CamofoxClient(
     private val httpClient: HttpClient,
@@ -34,6 +37,8 @@ class CamofoxClient(
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
+    // Mutex to ensure sequential Camofox requests
+    private val requestMutex = Mutex()
 
     private fun io.ktor.client.request.HttpRequestBuilder.addAuth() {
         if (accessKey != null) {
@@ -155,14 +160,17 @@ class CamofoxClient(
         }
     }
 
-    suspend fun getPageHtml(url: String): String {
+    /**
+     * Gets page HTML with Cloudflare challenge handling.
+     * Uses mutex to ensure sequential requests (parallel requests break Cloudflare).
+     */
+    suspend fun getPageHtml(url: String): String = requestMutex.withLock {
         logger.info { "Camofox navigating to: $url" }
         val startTime = System.currentTimeMillis()
         val tab = createTab(url)
         val tabId = tab.effectiveId()
         try {
             // Wait for Cloudflare challenge to complete (up to 30s)
-            // Check every 2 seconds if the page has loaded
             var attempts = 0
             val maxAttempts = 15 // 15 * 2s = 30s max
             var isChallenge = true
@@ -186,7 +194,6 @@ class CamofoxClient(
                 logger.warn { "Camofox Cloudflare challenge NOT passed after ${waitTime}ms, returning page as-is" }
             }
             
-            // Get final page info
             val pageUrl = evaluateJs(tabId, "window.location.href")
             val pageTitle = evaluateJs(tabId, "document.title")
             logger.info { "Camofox final page: url=$pageUrl, title=$pageTitle, waited=${waitTime}ms" }
