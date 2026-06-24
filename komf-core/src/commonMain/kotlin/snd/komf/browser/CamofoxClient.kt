@@ -4,6 +4,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -28,9 +29,16 @@ class CamofoxClient(
 ) {
     private val baseUrl = config.baseUrl.trimEnd('/')
     private val userId = config.userId
+    private val apiKey = config.apiKey
     private val json = Json { 
         ignoreUnknownKeys = true
         encodeDefaults = true
+    }
+
+    private fun io.ktor.client.request.HttpRequestBuilder.addAuth() {
+        if (apiKey != null) {
+            bearerAuth(apiKey)
+        }
     }
 
     /**
@@ -208,6 +216,7 @@ class CamofoxClient(
     suspend fun waitForSelector(tabId: String, selector: String, timeout: Long = 10000) {
         logger.debug { "Waiting for selector '$selector' in tab $tabId" }
         httpClient.post("$baseUrl/tabs/$tabId/wait") {
+            addAuth()
             contentType(ContentType.Application.Json)
             setBody(json.encodeToString(WaitRequest.serializer(), WaitRequest(
                 userId = userId,
@@ -220,6 +229,7 @@ class CamofoxClient(
     suspend fun evaluateJs(tabId: String, expression: String): String {
         logger.debug { "Evaluating JS in tab $tabId" }
         val response: EvaluateResponse = httpClient.post("$baseUrl/tabs/$tabId/evaluate") {
+            addAuth()
             contentType(ContentType.Application.Json)
             setBody(json.encodeToString(EvaluateRequest.serializer(), EvaluateRequest(
                 userId = userId,
