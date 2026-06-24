@@ -58,7 +58,10 @@ class BookWalkerClient(
                     parameter("np", 0)
                 }.bodyAsText()
             }
-            parser.parseSearchResults(document)
+            logger.info { "BookWalker HTML length: ${document.length}, starts with: ${document.take(200)}" }
+            val results = parser.parseSearchResults(document)
+            logger.info { "BookWalker found ${results.size} results" }
+            results
         } catch (e: ClientRequestException) {
             if (e.response.status == HttpStatusCode.NotFound) emptyList()
             else throw e
