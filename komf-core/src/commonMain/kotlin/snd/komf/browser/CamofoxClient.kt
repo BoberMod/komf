@@ -196,7 +196,7 @@ class CamofoxClient(
                 expression = expression
             )))
         }.body()
-        return response.result ?: ""
+        return response.resultAsString()
     }
 
     suspend fun healthCheck(): Boolean {
@@ -287,5 +287,29 @@ data class EvaluateRequest(
 @Serializable
 data class EvaluateResponse(
     val ok: Boolean = true,
-    val result: String? = null,
-)
+    @Serializable(with = AnySerializer::class)
+    val result: Any? = null,
+) {
+    fun resultAsString(): String = when (result) {
+        is String -> result
+        is Boolean -> result.toString()
+        is Number -> result.toString()
+        else -> result?.toString() ?: ""
+    }
+}
+
+private object AnySerializer : kotlinx.serialization.KSerializer<Any> {
+    override val descriptor = kotlinx.serialization.descriptors.PrimitiveSerialDescriptor("Any", kotlinx.serialization.descriptors.PrimitiveKind.STRING)
+    override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: Any) = encoder.encodeString(value.toString())
+    override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): Any {
+        val jsonDecoder = decoder as? kotlinx.serialization.json.JsonDecoder ?: return decoder.decodeString()
+        val element = jsonDecoder.decodeJsonElement()
+        return when (element) {
+            is kotlinx.serialization.json.JsonPrimitive -> {
+                if (element.isString) element.content
+                else element.content.toBooleanStrictOrNull() ?: element.content.toDoubleOrNull() ?: element.content
+            }
+            else -> element.toString()
+        }
+    }
+}
