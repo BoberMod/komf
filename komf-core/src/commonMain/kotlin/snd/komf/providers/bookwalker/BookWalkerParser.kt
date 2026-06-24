@@ -14,8 +14,11 @@ import snd.komf.providers.bookwalker.model.BookWalkerBookListPage
 import snd.komf.providers.bookwalker.model.BookWalkerSearchResult
 import snd.komf.providers.bookwalker.model.BookWalkerSeriesBook
 import snd.komf.providers.bookwalker.model.BookWalkerSeriesId
+import io.github.oshai.kotlinlogging.KotlinLogging
 import snd.komf.util.BookNameParser
 import snd.komf.util.replaceFullwidthChars
+
+private val parserLogger = KotlinLogging.logger {}
 
 class BookWalkerParser {
     private val baseUrl = "https://bookwalker.com"
@@ -47,6 +50,7 @@ class BookWalkerParser {
         
         // Find all series links in the search results
         val seriesLinks = document.select("a[href*=/series/]")
+        parserLogger.info { "BookWalkerParser: Found ${seriesLinks.size} series links" }
         val seenIds = mutableSetOf<String>()
         
         for (link in seriesLinks) {
