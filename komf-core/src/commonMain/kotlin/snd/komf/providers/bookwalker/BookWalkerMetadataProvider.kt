@@ -1,6 +1,7 @@
 package snd.komf.providers.bookwalker
 
 import io.github.reactivecircus.cache4k.Cache
+import io.ktor.client.call.body
 import snd.komf.model.Image
 import snd.komf.model.MatchQuery
 import snd.komf.model.MediaType
@@ -63,6 +64,10 @@ class BookWalkerMetadataProvider(
 
     override suspend fun getSeriesCover(seriesId: ProviderSeriesId): Image? {
         val books = getAllBooks(BookWalkerSeriesId(seriesId.value))
+        if (books.isEmpty()) {
+            // New format: try to get cover directly from series page
+            return client.getSeriesCoverFromPage(BookWalkerSeriesId(seriesId.value))
+        }
         return fetchCover(getFirstBook(books))
     }
 
