@@ -25,7 +25,7 @@ import snd.komf.providers.bookwalker.model.BookWalkerSeriesId
 
 private val logger = KotlinLogging.logger {}
 
-const val bookWalkerBaseUrl = "https://global.bookwalker.jp"
+const val bookWalkerBaseUrl = "https://bookwalker.com"
 
 class BookWalkerClient(
     ktor: HttpClient,
@@ -45,18 +45,15 @@ class BookWalkerClient(
     suspend fun searchSeries(name: String, category: BookWalkerCategory): Collection<BookWalkerSearchResult> {
 
         return try {
-            val url = "$bookWalkerBaseUrl/search/?word=$name&qcat=${category.number}&np=0"
+            // New bookwalker.com uses /browse?search=X format
+            val url = "$bookWalkerBaseUrl/browse?search=$name"
             logger.info { "BookWalker htmlFetcher is: ${if (htmlFetcher != null) "available" else "null"}" }
             val document = if (htmlFetcher != null) {
                 logger.info { "BookWalker using Camofox: $url" }
                 htmlFetcher.fetchHtml(url)
             } else {
                 logger.info { "BookWalker using direct HTTP: $url" }
-                htmlClient.get("$bookWalkerBaseUrl/search/") {
-                    parameter("word", name)
-                    parameter("qcat", category.number)
-                    parameter("np", 0)
-                }.bodyAsText()
+                htmlClient.get(url).bodyAsText()
             }
             logger.info { "BookWalker HTML length: ${document.length}, starts with: ${document.take(200)}" }
             val results = parser.parseSearchResults(document)
@@ -70,11 +67,11 @@ class BookWalkerClient(
     }
 
     suspend fun getSeriesBooks(id: BookWalkerSeriesId, page: Int): BookWalkerBookListPage {
-        val url = "$bookWalkerBaseUrl/series/${id.id}/?page=$page"
+        val url = "$bookWalkerBaseUrl/series/${id.id}?page=$page"
         val document = if (htmlFetcher != null) {
             htmlFetcher.fetchHtml(url)
         } else {
-            htmlClient.get("$bookWalkerBaseUrl/series/${id.id}/") {
+            htmlClient.get(url) {
                 parameter("page", page)
             }.bodyAsText()
         }
@@ -82,7 +79,7 @@ class BookWalkerClient(
     }
 
     suspend fun getBook(id: BookWalkerBookId): BookWalkerBook {
-        val url = "$bookWalkerBaseUrl/${id.id}/"
+        val url = "$bookWalkerBaseUrl/title/${id.id}"
         val document = if (htmlFetcher != null) {
             htmlFetcher.fetchHtml(url)
         } else {

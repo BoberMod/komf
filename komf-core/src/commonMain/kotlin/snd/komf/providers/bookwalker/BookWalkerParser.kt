@@ -18,7 +18,8 @@ import snd.komf.util.BookNameParser
 import snd.komf.util.replaceFullwidthChars
 
 class BookWalkerParser {
-    private val baseUrl = "https://global.bookwalker.jp"
+    private val baseUrl = "https://bookwalker.com"
+    private val oldBaseUrl = "https://global.bookwalker.jp"
     private val dateFormat = LocalDate.Format {
         monthName(MonthNames.ENGLISH_FULL)
         char(' ')
@@ -29,9 +30,59 @@ class BookWalkerParser {
 
     fun parseSearchResults(results: String): Collection<BookWalkerSearchResult> {
         val document = Ksoup.parse(results)
+        
+        // Try new bookwalker.com format first
+        val newResults = parseNewSearchResults(document)
+        if (newResults.isNotEmpty()) return newResults
+        
+        // Fall back to old global.bookwalker.jp format
         return document.getElementsByClass("o-tile-list").first()?.children()
-            ?.map { parseSearchResult(it) }
+            ?.map { parseOldSearchResult(it) }
             ?: emptyList()
+    }
+
+    private fun parseNewSearchResults(document: Document): Collection<BookWalkerSearchResult> {
+        // New format: book-card-grid-view-module elements with links to /series/{id}/{slug}
+        val results = mutableListOf<BookWalkerSearchResult>()
+        
+        // Find all series links in the search results
+        val seriesLinks = document.select("a[href*=/series/]")
+        val seenIds = mutableSetOf<String>()
+        
+        for (link in seriesLinks) {
+            val href = link.attr("href")
+            if (!href.contains("/series/")) continue
+            
+            // Parse series ID from href like /series/27J7TDKH5FD0/a-dating-sim-of-life-or-death
+            val seriesId = parseNewSeriesId(href) ?: continue
+            if (seenIds.contains(seriesId.id)) continue
+            seenIds.add(seriesId.id)
+            
+            // Get title from the link text or aria-label
+            val title = link.attr("aria-label").ifEmpty { link.text() }.trim()
+            if (title.isEmpty()) continue
+            
+            // Get thumbnail from nearby img element
+            val imageUrl = link.select("img").firstOrNull()?.let { img ->
+                img.attr("srcset").split(",").lastOrNull()?.trim()?.split(" ")?.firstOrNull()
+                    ?: img.attr("src")
+            }
+            
+            results.add(BookWalkerSearchResult(
+                seriesId = seriesId,
+                bookId = null,
+                seriesName = parseSeriesName(title),
+                imageUrl = imageUrl,
+            ))
+        }
+        
+        return results
+    }
+
+    private fun parseNewSeriesId(href: String): BookWalkerSeriesId? {
+        // Parse /series/27J7TDKH5FD0/a-dating-sim-of-life-or-death
+        val match = Regex("/series/([^/]+)(?:/.*)?").find(href) ?: return null
+        return BookWalkerSeriesId(match.groupValues[1].decodeURLPart())
     }
 
     fun parseSeriesBooks(seriesBooks: String): BookWalkerBookListPage {
@@ -126,7 +177,7 @@ class BookWalkerParser {
         )
     }
 
-    private fun parseSearchResult(result: Element): BookWalkerSearchResult {
+    private fun parseOldSearchResult(result: Element): BookWalkerSearchResult {
         val imageUrl = getSearchResultThumbnail(result)
         val titleElement = result.getElementsByClass("a-tile-ttl").first()!!
         val resultUrl = titleElement.child(0).attr("href")
@@ -142,16 +193,22 @@ class BookWalkerParser {
     }
 
     private fun parseSeriesId(url: String): BookWalkerSeriesId? {
-        if (url.startsWith("$baseUrl/series/").not()) return null
+        // Handle both old and new URL formats
+        val normalizedUrl = url.replace(oldBaseUrl, baseUrl)
+        if (!normalizedUrl.startsWith("$baseUrl/series/") && !normalizedUrl.startsWith("/series/")) return null
 
-        return url.removePrefix("$baseUrl/series/")
+        val path = normalizedUrl.removePrefix(baseUrl).removePrefix("/")
+        return path.removePrefix("series/")
             .replace("/.*/$".toRegex(), "")
             .removeSuffix("/")
-            .let { BookWalkerSeriesId(it.decodeURLPart()) }
+            .split("/")
+            .firstOrNull()
+            ?.let { BookWalkerSeriesId(it.decodeURLPart()) }
     }
 
     private fun parseBookId(url: String): BookWalkerBookId {
-        return url.removePrefix("$baseUrl/")
+        val normalizedUrl = url.replace(oldBaseUrl, baseUrl)
+        return normalizedUrl.removePrefix("$baseUrl/")
             .replace("/.*/$".toRegex(), "")
             .removeSuffix("/")
             .let { BookWalkerBookId(it.decodeURLPart()) }
