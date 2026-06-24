@@ -161,30 +161,35 @@ class CamofoxClient(
         val tab = createTab(url)
         val tabId = tab.effectiveId()
         try {
-            waitForSelector(tabId, "body", 10000)
+            // Wait for Cloudflare challenge to complete (up to 30s)
+            // Check every 2 seconds if the page has loaded
+            var attempts = 0
+            val maxAttempts = 15 // 15 * 2s = 30s max
+            var isChallenge = true
+            while (isChallenge && attempts < maxAttempts) {
+                kotlinx.coroutines.delay(2000)
+                attempts++
+                
+                val pageTitle = evaluateJs(tabId, "document.title")
+                isChallenge = pageTitle.contains("Just a moment") || pageTitle.contains("Checking your browser")
+                
+                if (isChallenge) {
+                    logger.info { "Camofox still waiting for challenge (${attempts * 2}s): $pageTitle" }
+                } else {
+                    logger.info { "Camofox challenge passed after ${attempts * 2}s: $pageTitle" }
+                }
+            }
+            
             val waitTime = System.currentTimeMillis() - startTime
             
-            // Check page status
+            if (isChallenge) {
+                logger.warn { "Camofox Cloudflare challenge NOT passed after ${waitTime}ms, returning page as-is" }
+            }
+            
+            // Get final page info
             val pageUrl = evaluateJs(tabId, "window.location.href")
             val pageTitle = evaluateJs(tabId, "document.title")
-            
-            // Detect Cloudflare challenge type
-            val challengeCheck = evaluateJs(tabId, """
-                (function() {
-                    var title = document.title || '';
-                    var hasChallenge = title.includes('Just a moment') || title.includes('Checking your browser');
-                    var hasCaptcha = !!document.querySelector('#challenge-running, [data-cf-challenge], .cf-turnstile, iframe[src*="challenges.cloudflare.com"]');
-                    var hasInput = !!document.querySelector('input[type="captcha"], .g-recaptcha, #g-recaptcha-response');
-                    return JSON.stringify({
-                        hasChallenge: hasChallenge,
-                        hasCaptcha: hasCaptcha,
-                        hasInput: hasInput,
-                        url: window.location.href
-                    });
-                })()
-            """)
-            
-            logger.info { "Camofox page status after ${waitTime}ms: url=$pageUrl, title=$pageTitle, challenge=$challengeCheck" }
+            logger.info { "Camofox final page: url=$pageUrl, title=$pageTitle, waited=${waitTime}ms" }
             
             val html = evaluateJs(tabId, "document.documentElement.outerHTML")
             logger.info { "Camofox got HTML: ${html.length} bytes" }
