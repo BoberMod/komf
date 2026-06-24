@@ -540,7 +540,7 @@ class ProvidersModule(
         if (config.enabled.not()) return null
 
         val providerClient = if (config.userAgent != null) {
-            NautiljonClient(nautiljonHttpClient.withUserAgent(config.userAgent))
+            NautiljonClient(nautiljonHttpClient.withUserAgent(config.userAgent), htmlFetcher)
         } else client
 
         val seriesMetadataMapper = NautiljonSeriesMetadataMapper(
@@ -650,7 +650,7 @@ class ProvidersModule(
         if (config.enabled.not()) return null
 
         val providerClient = if (config.userAgent != null) {
-            VizClient(vizHttpClient.withUserAgent(config.userAgent))
+            VizClient(vizHttpClient.withUserAgent(config.userAgent), htmlFetcher)
         } else client
 
         val metadataMapper = VizMetadataMapper(
@@ -679,7 +679,7 @@ class ProvidersModule(
         if (config.enabled.not()) return null
 
         val providerClient = if (config.userAgent != null) {
-            BookWalkerClient(bookWalkerHttpClient.withUserAgent(config.userAgent), json)
+            BookWalkerClient(bookWalkerHttpClient.withUserAgent(config.userAgent), json, htmlFetcher)
         } else client
 
         val bookWalkerMapper = BookWalkerMapper(
