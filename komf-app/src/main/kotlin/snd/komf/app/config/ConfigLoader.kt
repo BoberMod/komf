@@ -83,8 +83,8 @@ class ConfigLoader(private val yaml: Yaml) {
             ?: camofoxConfig.enabled
         val camofoxBaseUrl = System.getenv("KOMF_CAMOFOX_BASE_URL")?.ifBlank { null }
             ?: camofoxConfig.baseUrl
-        val camofoxApiKey = System.getenv("KOMF_CAMOFOX_API_KEY")?.ifBlank { null }
-            ?: camofoxConfig.apiKey
+        val camofoxAccessKey = System.getenv("KOMF_CAMOFOX_ACCESS_KEY")?.ifBlank { null }
+            ?: camofoxConfig.accessKey
         val camofoxUserId = System.getenv("KOMF_CAMOFOX_USER_ID")?.ifBlank { null }
             ?: camofoxConfig.userId
 
@@ -110,7 +110,7 @@ class ConfigLoader(private val yaml: Yaml) {
                 camofox = camofoxConfig.copy(
                     enabled = camofoxEnabled,
                     baseUrl = camofoxBaseUrl,
-                    apiKey = camofoxApiKey,
+                    accessKey = camofoxAccessKey,
                     userId = camofoxUserId
                 )
             ),
